@@ -1,0 +1,14 @@
+[project]
+name = "wikipediagame"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "beautifulsoup4>=4.14.2",
+    "bs4>=0.0.2",
+    "lxml>=6.0.2",
+    "numpy>=2.2.6",
+    "requests>=2.32.5",
+    "sentence-transformers>=5.1.2",
+]

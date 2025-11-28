@@ -1,36 +1,44 @@
-from scapper import Scrapper
 from get_similar_word import GetSimilarWord
+
+from scapper import Scrapper
+import logging
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin, urlparse
+from dataclasses import dataclass
+from typing import List, Optional, Tuple, Set
+
+import numpy as np
+from sentence_transformers import SentenceTransformer
+from engine import WikipediaGame
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+@dataclass
+class Link:
+    text: str
+    url: str
 
 
 
 def main():
-    start_url = "https://en.wikipedia.org/wiki/Narendra_Modi"
-    target = "New Delhi"
 
-    visited = set()
-    current_url = start_url
+    # Example: from Narendra Modi page to something like "New Delhi"
+    start_url = "https://en.wikipedia.org/wiki/Parul_University"
+    target_text = "Shah Rukh Khan"
+
     scraper = Scrapper()
-    similar = GetSimilarWord()
+    selector = GetSimilarWord()
+    game = WikipediaGame(scraper, selector, max_depth=10, similarity_threshold=0.85)
 
-    while True:
-        if current_url in visited:
-            break
-        
-        visited.add(current_url)
-        
-        links = scraper.get_links(current_url)
-        clean_links = convert_links_to_text_url(links)
-        
-        best_text, best_url, score = similar.getSimilarWord(target, clean_links)
-        
-        print("Moving to:", best_text, best_url)
-        
-        current_url = best_url
+    path = game.play(start_url, target_text)
 
-        if best_text.lower() == target.lower() or score > 0.85:
-            print("Reached target!")
-            break
-
+    print("\nFinal Path:")
+    for i, (title, url) in enumerate(path, start=1):
+        print(f"{i}. {title} -> {url}")
 
 
 if __name__ == "__main__":

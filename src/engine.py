@@ -22,97 +22,100 @@ class Link:
     text: str
     url: str
 
+
+
 class WikipediaGame:
     def __init__(
         self,
         scraper: Scrapper,
         selector: GetSimilarWord,
-        max_steps: int = 15,
+        max_depth: int = 5,
         similarity_threshold: float = 0.85,
     ):
         self.scraper = scraper
         self.selector = selector
-        self.max_steps = max_steps
+        self.max_depth = max_depth
         self.similarity_threshold = similarity_threshold
+        self.visited = set()
 
     def _canonical_url(self, url: str) -> str:
-        # Drop fragment and query to avoid duplicates
+        from urllib.parse import urlparse
         parsed = urlparse(url)
         return parsed._replace(fragment="", query="").geturl()
 
     def _title_from_url(self, url: str) -> str:
-        """
-        Convert .../wiki/New_Delhi -> 'New Delhi'
-        """
+        from urllib.parse import urlparse
         parsed = urlparse(url)
         if not parsed.path.startswith("/wiki/"):
             return url
         title = parsed.path.split("/wiki/")[-1]
         return title.replace("_", " ")
 
-    def play(self, start_url: str, target_text: str):
-        """
-        Runs the game:
-        - start_url: starting Wikipedia page
-        - target_text: user-provided target concept/text
-        """
-        logger.info(f"Starting Wikipedia Game")
-        logger.info(f"Start URL: {start_url}")
-        logger.info(f"Target text: '{target_text}'")
+    # ===========================
+    # MAIN DFS WITH BACKTRACKING
+    # ===========================
+    def dfs(self, current_url: str, target: str, depth: int, path: List[Tuple[str, str]]):
+        current_url = self._canonical_url(current_url)
+        current_title = self._title_from_url(current_url)
 
-        visited: Set[str] = set()
-        path = []
+        logger.info(f"{'  '*depth}Exploring: {current_title} ({current_url}) Depth={depth}")
 
-        current_url = self._canonical_url(start_url)
+        # Stop looping on revisits
+        if current_url in self.visited:
+            logger.info(f"{'  '*depth}Already visited. Backtracking...")
+            return False
+        
+        self.visited.add(current_url)
+        path.append((current_title, current_url))
 
-        for step in range(1, self.max_steps + 1):
-            if current_url in visited:
-                logger.warning(f"Already visited {current_url}. Breaking to avoid loop.")
-                break
+        # Check if we reached the target
+        if current_title.lower() == target.lower():
+            logger.info(f"{'  '*depth}Reached target page: {current_title}")
+            return True
 
-            visited.add(current_url)
-            current_title = self._title_from_url(current_url)
-            logger.info(f"\n--- Step {step} ---")
-            logger.info(f"Current page: {current_title} ({current_url})")
+        if depth >= self.max_depth:
+            logger.info(f"{'  '*depth}Max depth reached. Backtracking...")
+            path.pop()
+            return False
 
-            path.append((current_title, current_url))
+        # Get links from this page
+        links = self.scraper.get_links(current_url)
+        if not links:
+            logger.info(f"{'  '*depth}No links found. Backtracking...")
+            path.pop()
+            return False
 
-            # Check if current page itself is already the target title
-            if current_title.lower() == target_text.lower():
-                logger.info("Current page title matches target text. Game finished.")
-                break
+        # Rank the links by similarity
+        ranked: List[Tuple[float, Link]] = []
+        for link in links:
+            if not link.text.strip():
+                continue
+            _, score = self.selector.get_similar_link(target, [link])
+            ranked.append((score, link))
 
-            links = self.scraper.get_links(current_url)
-            if not links:
-                logger.warning("No links on this page. Stopping.")
-                break
+        ranked.sort(reverse=True, key=lambda x: x[0])  # Best first
 
-            best_link, score = self.selector.get_similar_link(target_text, links)
-            if best_link is None:
-                logger.warning("Could not find a suitable next link. Stopping.")
-                break
-
-            logger.info(f"Chose next: '{best_link.text}' ({score:.4f}) -> {best_link.url}")
-
-            # Stop if similarity is high enough or link text matches target
-            if best_link.text.lower() == target_text.lower():
-                logger.info("Best link text exactly matches target. Game finished.")
-                path.append((best_link.text, best_link.url))
-                break
-
+        # Try each link in descending similarity
+        for score, link in ranked:
             if score >= self.similarity_threshold:
-                logger.info(
-                    f"Similarity {score:.4f} >= threshold {self.similarity_threshold:.2f}. "
-                    f"Assuming target reached."
-                )
-                path.append((best_link.text, best_link.url))
-                break
+                logger.info(f"{'  '*depth}High similarity: {score:.4f} -> Trying {link.text}")
 
-            # Move to next page
-            current_url = self._canonical_url(best_link.url)
+            if self.dfs(link.url, target, depth + 1, path):
+                return True
 
-        logger.info("\n=== PATH TAKEN ===")
-        for idx, (title, url) in enumerate(path, start=1):
-            logger.info(f"{idx}. {title} -> {url}")
+        # If none worked → backtrack
+        logger.info(f"{'  '*depth}All links exhausted for {current_title}. Backtracking...")
+        path.pop()
+        return False
+
+    # PUBLIC METHOD
+    def play(self, start_url: str, target: str):
+        path = []
+        found = self.dfs(start_url, target, 0, path)
+
+        if not found:
+            logger.info("Did not reach the target. Partial path shown:")
+        else:
+            logger.info("Successfully reached target!")
 
         return path

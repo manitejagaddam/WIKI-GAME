@@ -24,19 +24,24 @@ class Link:
     text: str
     url: str
 
-
 class GetSimilarWord:
-    def __init__(self):
-        logger.info("Loading SentenceTransformer model (all-MiniLM-L6-v2)...")
-        self.model = SentenceTransformer("all-MiniLM-L6-v2")
-        logger.info("Model loaded.")
+    _model = None  # class-level model
 
-    def get_similar_link(self, query: str, links: List[Link]) -> Tuple[Optional[Link], Optional[float]]:
+    def __init__(self):
+        if GetSimilarWord._model is None:
+            logger.info("Loading SentenceTransformer model (all-MiniLM-L6-v2)...")
+            GetSimilarWord._model = SentenceTransformer("all-MiniLM-L6-v2")
+            logger.info("Model loaded.")
+        else:
+            logger.info("Reusing already-loaded model.")
+
+        self.model = GetSimilarWord._model
+
+    def get_similar_link(self, query: str, links: List[Link]):
         if not links:
             logger.warning("Link list is empty. Cannot compute similarity.")
             return None, None
 
-        # Filter out completely empty texts
         clean_links = [link for link in links if link.text and link.text.strip()]
         if not clean_links:
             logger.warning("All link texts are empty after filtering.")
@@ -45,10 +50,9 @@ class GetSimilarWord:
         texts = [link.text for link in clean_links]
 
         logger.info(f"Encoding query and {len(texts)} link texts...")
-        query_emb = self.model.encode([query])          # shape: (1, D)
-        link_embs = self.model.encode(texts)            # shape: (N, D)
+        query_emb = self.model.encode([query])
+        link_embs = self.model.encode(texts)
 
-        # Cosine similarity via dot product (embeddings are normalized by default for this model)
         similarities = np.dot(link_embs, query_emb.T).flatten()
 
         best_idx = int(np.argmax(similarities))
@@ -57,4 +61,3 @@ class GetSimilarWord:
 
         logger.info(f"Best match: '{best_link.text}' ({best_score:.4f}) -> {best_link.url}")
         return best_link, best_score
-
