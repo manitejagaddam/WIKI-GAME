@@ -1,71 +1,84 @@
-import requests
 import logging
+import requests
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin, urlparse
+from dataclasses import dataclass
+from typing import List, Optional, Tuple, Set
 
-# -----------------------
-# Configure Global Logger
-# -----------------------
 logging.basicConfig(
-    level=logging.INFO,                      # Change to DEBUG for more details
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
+logger = logging.getLogger(__name__)
+
+@dataclass
+class Link:
+    text: str
+    url: str
 
 class Scrapper:
-    def __init__(self, _url):
-        self.url = _url
-        self.html_text = ""
-
-    def get_html(self):
-        headers = {
+    def __init__(self, base_url: str = "https://en.wikipedia.org"):
+        self.base_url = base_url
+        self.session = requests.Session()
+        self.session.headers.update({
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
                 " AppleWebKit/537.36 (KHTML, like Gecko)"
                 " Chrome/120.0.0.0 Safari/537.36"
             )
-        }
+        })
 
-        logging.info(f"Fetching URL: {self.url}")
-
+    def get_html(self, url: str) -> str:
+        logger.info(f"Fetching URL: {url}")
         try:
-            res = requests.get(self.url, timeout=10, headers=headers)
+            res = self.session.get(url, timeout=10)
             res.raise_for_status()
-
-            logging.info(f"Fetched successfully: {len(res.text)} characters")
-            self.html_text = res.text
-
-        except requests.exceptions.HTTPError as e:
-            logging.error(f"HTTP error fetching URL {self.url}: {e}")
-            self.html_text = ""
-
+            logger.info(f"Fetched successfully ({len(res.text)} chars).")
+            return res.text
         except requests.exceptions.RequestException as e:
-            logging.error(f"Network error fetching URL {self.url}: {e}")
-            self.html_text = ""
+            logger.error(f"Error fetching URL {url}: {e}")
+            return ""
 
-    def get_links(self, url=""):
-        if url != "":
-            logging.info(f"URL overridden. New URL: {url}")
-            self.url = url
+    def _is_useful_href(self, href: str) -> bool:
+        # Skip fragments, mailto, javascript, etc.
+        if not href:
+            return False
+        if href.startswith("#"):
+            return False
+        if href.startswith("mailto:") or href.startswith("javascript:"):
+            return False
 
-        self.get_html()
-        if not self.html_text:
-            logging.warning("HTML content is empty. No links extracted.")
+        # Wikipedia-specific filters
+        # Only internal wiki links
+        if href.startswith("/wiki/") or href.startswith("https://en.wikipedia.org/wiki/"):
+            # Skip special namespaces like Help:, File:, Talk:, etc.
+            if any(ns in href for ns in [":", "Main_Page"]):
+                return False
+            return True
+
+        return False
+
+    def get_links(self, url: str) -> List[Link]:
+        html = self.get_html(url)
+        if not html:
+            logger.warning("Empty HTML. No links extracted.")
             return []
 
-        soup = BeautifulSoup(self.html_text, 'html.parser')
-        links = []
+        soup = BeautifulSoup(html, "html.parser")
+        links: List[Link] = []
 
-        logging.info("Extracting links...")
+        logger.info("Extracting links from page...")
 
-        for tag in soup.find_all('a'):
-            text = tag.get_text().strip()
-            href = tag.get('href')
-
-            if not href:
-                logging.debug("Skipping <a> tag without href.")
+        for tag in soup.find_all("a"):
+            href = tag.get("href")
+            if not self._is_useful_href(href):
                 continue
 
-            links.append({"text": text, "url": href})
+            text = tag.get_text(strip=True) or ""
+            # Build absolute URL
+            abs_url = urljoin(self.base_url, href)
 
-        logging.info(f"Total links extracted: {len(links)}")
+            links.append(Link(text=text, url=abs_url))
 
+        logger.info(f"Total useful links extracted: {len(links)}")
         return links

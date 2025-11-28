@@ -1,38 +1,60 @@
-from sentence_transformers import SentenceTransformer
-import numpy as np
 import logging
+import requests
+from dataclasses import dataclass
+from typing import List, Optional, Tuple, Set
+
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
+# -----------------------
+# Logging Setup
+# -----------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+
+# -----------------------
+# Data Model
+# -----------------------
+@dataclass
+class Link:
+    text: str
+    url: str
+
 
 class GetSimilarWord:
     def __init__(self):
-        logging.info("Loading SentenceTransformer model...")
+        logger.info("Loading SentenceTransformer model (all-MiniLM-L6-v2)...")
         self.model = SentenceTransformer("all-MiniLM-L6-v2")
-        logging.info("Model loaded.")
+        logger.info("Model loaded.")
 
-    def getSimilarWord(self, query, links):
+    def get_similar_link(self, query: str, links: List[Link]) -> Tuple[Optional[Link], Optional[float]]:
         if not links:
-            logging.warning("Link list is empty. Cannot compute similarity.")
-            return None, None, None
+            logger.warning("Link list is empty. Cannot compute similarity.")
+            return None, None
 
-        # Filter out empty or None text items
-        clean_links = [(txt, url) for txt, url in links if txt and txt.strip()]
-        
+        # Filter out completely empty texts
+        clean_links = [link for link in links if link.text and link.text.strip()]
         if not clean_links:
-            logging.warning("All link texts are empty after filtering.")
-            return None, None, None
+            logger.warning("All link texts are empty after filtering.")
+            return None, None
 
-        texts = [txt for txt, _ in clean_links]
+        texts = [link.text for link in clean_links]
 
-        logging.info(f"Encoding {len(texts)} link texts...")
-        query_emb = self.model.encode([query])
-        link_embs = self.model.encode(texts)
+        logger.info(f"Encoding query and {len(texts)} link texts...")
+        query_emb = self.model.encode([query])          # shape: (1, D)
+        link_embs = self.model.encode(texts)            # shape: (N, D)
 
-        # Cosine similarity (fast and simple)
+        # Cosine similarity via dot product (embeddings are normalized by default for this model)
         similarities = np.dot(link_embs, query_emb.T).flatten()
 
-        best_idx = np.argmax(similarities)
-        best_text, best_url = clean_links[best_idx]
-        best_score = similarities[best_idx]
+        best_idx = int(np.argmax(similarities))
+        best_link = clean_links[best_idx]
+        best_score = float(similarities[best_idx])
 
-        logging.info(f"Best match: '{best_text}' ({best_score:.4f})")
+        logger.info(f"Best match: '{best_link.text}' ({best_score:.4f}) -> {best_link.url}")
+        return best_link, best_score
 
-        return best_text, best_url, best_score
