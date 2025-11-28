@@ -23,7 +23,8 @@ class Scrapper:
             print("Error fetching HTML:", e)
             self.html_text = ""
 
-    def get_links(self):
+    def get_links(self, url = ""):
+        if url != "" : self.url = url 
         self.get_html()
         if not self.html_text:
             return []

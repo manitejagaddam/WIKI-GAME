@@ -6,7 +6,7 @@ def main():
     url = "https://en.wikipedia.org/wiki/Narendra_Modi"
     sc = Scrapper(url)
     links = sc.get_links()
-    print(links)
+    print(links[:10])
 
 
 if __name__ == "__main__":
