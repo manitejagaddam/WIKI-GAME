@@ -46,7 +46,7 @@ class WikipediaGame:
             return url
         return parsed.path.split("/wiki/")[-1].replace("_", " ")
     
-    def play_stepwise(self, start_url: str, target: str):
+    def play_stepwise_title(self, start_url: str, target: str):
         current_url = self._canonical_url(start_url)
 
         for step in range(self.max_steps):
@@ -62,7 +62,7 @@ class WikipediaGame:
 
             current_url = self._canonical_url(best_link.url)
 
-    def play_stepwise(self, start_url: str, target_title: str, target_context: str):
+    def play_stepwise_context(self, start_url: str, target_title: str, target_context: str):
         current_url = self._canonical_url(start_url)
 
         for step in range(self.max_steps):
