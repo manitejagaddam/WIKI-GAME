@@ -13,7 +13,7 @@ from run_thread import run_game_thread_context, run_game_thread_title
 
 
 
-def main():
+def mainFun():
 
     # target_title = "England"
     target_title = "Bhupalpally"
