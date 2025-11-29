@@ -12,11 +12,12 @@ from run_thread import run_game_thread_context, run_game_thread_title
 
 def main():
 
-    start_url = "https://en.wikipedia.org/wiki/India"
     # target_title = "England"
-    target_title = "Dani Daniels"
+    target_title = "London"
 
-    target_context = fetch_wikipedia_summary(target_title, 100)
+    target_context, target_lang = fetch_wikipedia_summary(target_title, 100)
+    start_url = f"https://{target_lang}.wikipedia.org/wiki/India"
+    print("target_lang =", target_lang)
     print(f"target_context: {target_context}")
 
     results = []
@@ -24,12 +25,12 @@ def main():
 
     thread_title = threading.Thread(
         target=run_game_thread_title,
-        args=("Title-Based", start_url, target_title, results, stop_event)
+        args=("Title-Based", start_url, target_title, target_lang, results, stop_event)
     )
 
     thread_context = threading.Thread(
         target=run_game_thread_context,
-        args=("Context-Based", start_url, target_title, target_context, results, stop_event)
+        args=("Context-Based", start_url, target_title, target_context, target_lang, results, stop_event)
     )
 
     thread_title.start()

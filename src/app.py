@@ -1,5 +1,6 @@
 import streamlit as st
 import threading
+from urllib.parse import urlparse
 
 from scapper import Scrapper
 from get_similar_word import GetSimilarWord
@@ -8,10 +9,18 @@ from fetch_target_summary import fetch_wikipedia_summary
 from run_thread import run_game_thread_title, run_game_thread_context
 
 
-st.set_page_config(page_title="Wikipedia Race Navigator", page_icon="🌐", layout="wide")
+# --------------------------------------------------------------------
+# STREAMLIT CONFIG
+# --------------------------------------------------------------------
+st.set_page_config(
+    page_title="Wikipedia Race Navigator",
+    page_icon="🌐",
+    layout="wide"
+)
 
 st.title("🌐 Wikipedia Greedy Navigator — Multithreaded Race Mode")
-st.write("Two threads race: one using Title-Based similarity & one using Context-Based similarity.")
+st.write("Two threads race: **Title-Based** vs **Context-Based** similarity.")
+
 
 # --------------------------------------------------------------------
 # USER INPUTS
@@ -34,25 +43,37 @@ start_button = st.button("🚀 Start Multithreaded Race")
 
 
 # --------------------------------------------------------------------
-# THREAD RUNNER
+# CORE RACE RUNNER
 # --------------------------------------------------------------------
 def run_navigation_race():
-    st.info("Fetching target context...")
-    target_context = fetch_wikipedia_summary(target_title, word_limit)
 
+    st.info("Fetching target summary and detecting language...")
+    target_context, target_lang = fetch_wikipedia_summary(target_title, word_limit)
+
+    st.write(f"**Detected Language:** `{target_lang}`")
+    st.write(f"**Extracted Context:** {target_context[:300]}...")
+
+
+    # Force start URL to match discovered language domain
+    page_slug = start_url.split("/wiki/")[-1]
+    lang_start_url = f"https://{target_lang}.wikipedia.org/wiki/{page_slug}"
+
+    st.write(f"Using language-adapted start URL: {lang_start_url}")
+
+    # THREAD RESULTS AND STOP FLAG
     results = []
     stop_event = threading.Event()
 
-    # THREAD 1 — Title-based
+    # Thread 1 - Title based
     t1 = threading.Thread(
         target=run_game_thread_title,
-        args=("Title-Based", start_url, target_title, results, stop_event)
+        args=("Title-Based", lang_start_url, target_title, target_lang, results, stop_event)
     )
 
-    # THREAD 2 — Context-based
+    # Thread 2 - Context based
     t2 = threading.Thread(
         target=run_game_thread_context,
-        args=("Context-Based", start_url, target_title, target_context, results, stop_event)
+        args=("Context-Based", lang_start_url, target_title, target_context, target_lang, results, stop_event)
     )
 
     st.write("Starting threads...")
@@ -65,11 +86,12 @@ def run_navigation_race():
 
     st.success("Race Completed!")
 
-    return results
+    return results, target_lang, target_context
+
 
 
 # --------------------------------------------------------------------
-# MAIN EXECUTION
+# UI EXECUTION
 # --------------------------------------------------------------------
 if start_button:
 
@@ -79,29 +101,35 @@ if start_button:
 
     st.warning("⏳ Running two navigation threads in parallel...")
 
-    results = run_navigation_race()
+    results, target_lang, target_context = run_navigation_race()
 
-    # --------------------------------------------------------------
+    # ----------------------------------------------------------------
     # DISPLAY RESULTS
-    # --------------------------------------------------------------
+    # ----------------------------------------------------------------
     st.subheader("🏁 Race Result")
 
     if not results:
-        st.error("⚠ No thread finished. Probably got stuck.")
+        st.error("⚠ No thread finished. Probably got stuck or both were stopped early.")
         st.stop()
 
+    # Winner is always first appended
     winner = results[0]
 
-    st.success(f"🏆 **Winner: {winner.name} Navigation**")
+    st.success(f"🏆 **Winner:** {winner.name}")
 
-    # Show winning path
     st.markdown("### 🧭 Winning Path")
     for i, (title, url) in enumerate(winner.path, start=1):
         st.markdown(f"**{i}. [{title}]({url})**")
 
-    # Comparison info
+    # If loser exists, show it too
     if len(results) > 1:
-        st.markdown("### 🥈 Second Thread Result")
+        st.markdown("---")
+        st.markdown("### 🥈 Second Thread Path")
         loser = results[1]
         for i, (title, url) in enumerate(loser.path, start=1):
             st.markdown(f"{i}. [{title}]({url})")
+
+    st.markdown("---")
+    st.markdown("### 🔍 Debug Information")
+    st.write(f"**Detected language:** {target_lang}")
+    st.write(f"**Target context (first 300 chars):** {target_context[:300]}...")

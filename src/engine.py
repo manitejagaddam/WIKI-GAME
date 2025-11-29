@@ -28,9 +28,11 @@ class WikipediaGame:
         scraper: Scrapper,
         selector: GetSimilarWord,
         max_steps: int = 100,
-        similarity_threshold: float = 0.40
+        similarity_threshold: float = 0.40,
+        target_lang:str = "en"
     ):
-        self.scraper = scraper
+        self.target_lang = target_lang
+        self.scraper = Scrapper(self.target_lang)
         self.selector = selector
         self.max_steps = max_steps
         self.similarity_threshold = similarity_threshold

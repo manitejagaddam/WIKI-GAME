@@ -13,7 +13,7 @@ def safe_get(session, url, timeout=5):
         return None
 
 
-def fetch_wikipedia_summary(title: str, word_limit: int = 100) -> str:
+def fetch_wikipedia_summary(title: str, word_limit: int = 100):
     session = create_session()
     normalized_title = title.replace(" ", "_")
 
@@ -39,7 +39,7 @@ def fetch_wikipedia_summary(title: str, word_limit: int = 100) -> str:
             summary = " ".join(words[:word_limit])
 
             print(f"Found summary in {lang.upper()}!")
-            return summary
+            return summary, lang  # <--- RETURN LANGUAGE ALSO
 
     print("No valid summary found in any language.")
-    return title
+    return title, "en"   # default fallback
