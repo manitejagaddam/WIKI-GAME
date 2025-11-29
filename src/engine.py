@@ -45,6 +45,23 @@ class WikipediaGame:
         if not parsed.path.startswith("/wiki/"):
             return url
         return parsed.path.split("/wiki/")[-1].replace("_", " ")
+    
+    def play_stepwise(self, start_url: str, target: str):
+        current_url = self._canonical_url(start_url)
+
+        for step in range(self.max_steps):
+            title = self._title_from_url(current_url)
+            yield (title, current_url)
+
+            if title.lower() == target.lower():
+                return
+
+            best_link, score = self._get_best_next_link(current_url, target)
+            if not best_link:
+                return
+
+            current_url = self._canonical_url(best_link.url)
+
 
     # ================================================================
     # 🔥 Greedy Step-by-Step Wikipedia Navigation (NO DFS)
