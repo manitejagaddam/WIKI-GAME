@@ -22,7 +22,7 @@ class PathResult:
 
 
 
-def run_game_thread1(name, start_url, target, results_list, stop_event):
+def run_game_thread_title(name, start_url, target, results_list, stop_event):
     """Thread worker with early stop support."""
     scraper = Scrapper()
     selector = GetSimilarWord()
@@ -48,18 +48,18 @@ def run_game_thread1(name, start_url, target, results_list, stop_event):
 
 
 
-def run_game_thread2(name, start_url, target, results_list, stop_event):
+def run_game_thread_context(name, start_url, target, context, results_list, stop_event):
     """Thread worker with early stop support."""
     scraper = Scrapper()
     selector = GetSimilarWord()
-    game = WikipediaGame(scraper, selector, max_steps=30, similarity_threshold=0.20)
+    game = WikipediaGame(scraper, selector, max_steps=70, similarity_threshold=0.20)
 
     logger.info(f"[{name}] Starting game...")
 
     # GAME RUNS STEP BY STEP
     path = []
 
-    for title, url in game.play_stepwise(start_url, target):
+    for title, url in game.play_stepwise(start_url, target, context):
         if stop_event.is_set():
             logger.info(f"[{name}] Stop signal received. Exiting thread.")
             return

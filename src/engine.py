@@ -62,6 +62,28 @@ class WikipediaGame:
 
             current_url = self._canonical_url(best_link.url)
 
+    def play_stepwise(self, start_url: str, target_title: str, target_context: str):
+        current_url = self._canonical_url(start_url)
+
+        for step in range(self.max_steps):
+            title = self._title_from_url(current_url)
+
+            # Yield step so thread can stop early
+            yield (title, current_url)
+
+            # STOP CONDITION (title match, not context match)
+            if title.lower() == target_title.lower():
+                return
+
+            # Find best next link using CONTEXT for similarity
+            best_link, score = self._get_best_next_link(current_url, target_context)
+
+            if not best_link:
+                return
+
+            current_url = self._canonical_url(best_link.url)
+
+
 
     # ================================================================
     # 🔥 Greedy Step-by-Step Wikipedia Navigation (NO DFS)
@@ -77,7 +99,7 @@ class WikipediaGame:
             return None, None
 
         texts = [link.text for link in clean_links]
-        print(texts)
+        # print(texts)
 
         # Encode target once
         query_emb = self.selector.model.encode([target])

@@ -5,7 +5,7 @@ from scapper import Scrapper
 from get_similar_word import GetSimilarWord
 from engine import WikipediaGame
 from fetch_target_summary import fetch_wikipedia_summary
-from run_thread import run_game_thread1, run_game_thread2
+from run_thread import run_game_thread_title, run_game_thread_context
 
 
 st.set_page_config(page_title="Wikipedia Race Navigator", page_icon="🌐", layout="wide")
@@ -45,14 +45,14 @@ def run_navigation_race():
 
     # THREAD 1 — Title-based
     t1 = threading.Thread(
-        target=run_game_thread1,
+        target=run_game_thread_title,
         args=("Title-Based", start_url, target_title, results, stop_event)
     )
 
     # THREAD 2 — Context-based
     t2 = threading.Thread(
-        target=run_game_thread2,
-        args=("Context-Based", start_url, target_context, results, stop_event)
+        target=run_game_thread_context,
+        args=("Context-Based", start_url, target_title, target_context, results, stop_event)
     )
 
     st.write("Starting threads...")
