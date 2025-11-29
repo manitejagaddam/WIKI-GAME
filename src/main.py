@@ -13,9 +13,9 @@ from run_thread import run_game_thread_context, run_game_thread_title
 def main():
 
     # target_title = "England"
-    target_title = "London"
+    target_title = "Bhupalpally"
 
-    target_context, target_lang = fetch_wikipedia_summary(target_title, 100)
+    target_context, target_lang = fetch_wikipedia_summary(target_title, 200)
     start_url = f"https://{target_lang}.wikipedia.org/wiki/India"
     print("target_lang =", target_lang)
     print(f"target_context: {target_context}")

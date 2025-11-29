@@ -32,7 +32,7 @@ start_url = st.text_input(
 
 target_title = st.text_input(
     "Target Page Title:",
-    "London"
+    "Bhupalpally"
 )
 
 word_limit = st.slider("Word Limit for Context Extraction:", 20, 200, 80)
