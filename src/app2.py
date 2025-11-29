@@ -67,13 +67,13 @@ def run_navigation_race():
     # Thread 1 - Title based
     t1 = threading.Thread(
         target=run_game_thread_title,
-        args=("Title-Based", lang_start_url, target_title, target_lang, results, stop_event)
+        args=("Title-Based", lang_start_url, target_title, target_lang, max_steps, threshold, results, stop_event)
     )
 
     # Thread 2 - Context based
     t2 = threading.Thread(
         target=run_game_thread_context,
-        args=("Context-Based", lang_start_url, target_title, target_context, target_lang, results, stop_event)
+        args=("Context-Based", lang_start_url, target_title, target_context, target_lang, max_steps, threshold, results, stop_event)
     )
 
     st.write("Starting threads...")
