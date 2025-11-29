@@ -52,7 +52,7 @@ def run_game_thread_context(name, start_url, target, context, results_list, stop
     """Thread worker with early stop support."""
     scraper = Scrapper()
     selector = GetSimilarWord()
-    game = WikipediaGame(scraper, selector, max_steps=70, similarity_threshold=0.20)
+    game = WikipediaGame(scraper, selector, max_steps=90, similarity_threshold=0.20)
 
     logger.info(f"[{name}] Starting game...")
 
