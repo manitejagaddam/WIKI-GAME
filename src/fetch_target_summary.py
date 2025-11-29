@@ -2,9 +2,9 @@ import requests
 from bs4 import BeautifulSoup
 from clean_summary import clean_text
 
+LANGS = ["en", "simple", "es", "fr", "de", "hi", "ru", "ja"]
+
 def fetch_wikipedia_summary(title: str, word_limit: int = 100) -> str:
-    url = f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}"
-    
     session = requests.Session()
     session.headers.update({
         "User-Agent": (
@@ -13,33 +13,35 @@ def fetch_wikipedia_summary(title: str, word_limit: int = 100) -> str:
             " Chrome/120.0.0.0 Safari/537.36"
         )
     })
+
+    normalized_title = title.replace(" ", "_")
     
-    resp = session.get(url)
+    for lang in LANGS:
+        url = f"https://{lang}.wikipedia.org/wiki/{normalized_title}"
+        print(f"Trying {lang.upper()} → {url}")
 
-    if resp.status_code != 200:
-        print("Error fetching page")
-        return title
+        resp = session.get(url)
 
-    soup = BeautifulSoup(resp.text, "html.parser")
+        if resp.status_code != 200:
+            continue  # try next language
 
-    # Select all intro paragraphs inside the correct wiki container
-    paragraphs = soup.select("#mw-content-text .mw-parser-output > p")
+        soup = BeautifulSoup(resp.text, "html.parser")
+        paragraphs = soup.select("#mw-content-text .mw-parser-output > p")
 
-    for p in paragraphs:
-        text = p.get_text().strip()
+        for p in paragraphs:
+            text = p.get_text().strip()
+            cleaned = clean_text(text)
 
-        # skip empty / metadata paragraphs
+            if not cleaned or len(cleaned) < 30:
+                continue
 
-        cleaned = clean_text(text)
+            # take first meaningful paragraph
+            words = cleaned.split()
+            summary = " ".join(words[:word_limit])
 
-        if not cleaned or len(cleaned) < 30:
-            continue
-        
-        # take first meaningful paragraph
-        words = cleaned.split()
-        summary = " ".join(words[:word_limit])
-        print(summary)
-        return summary
+            print(f"Found summary in {lang.upper()}!")
+            return summary
 
-    # fallback
+    # fallback to title if nothing found
+    print("No valid summary found in any language.")
     return title

@@ -6,7 +6,7 @@ from engine import WikipediaGame
 
 import logging
 from dataclasses import dataclass
-from run_thread import run_game_thread
+from run_thread import run_game_thread_context, run_game_thread_title
 
 
 
@@ -14,7 +14,7 @@ def main():
 
     start_url = "https://en.wikipedia.org/wiki/India"
     # target_title = "England"
-    target_title = "Bhupalpally"
+    target_title = "Dani Daniels"
 
     target_context = fetch_wikipedia_summary(target_title, 100)
     print(f"target_context: {target_context}")
@@ -23,13 +23,13 @@ def main():
     stop_event = threading.Event()
 
     thread_title = threading.Thread(
-        target=run_game_thread,
+        target=run_game_thread_title,
         args=("Title-Based", start_url, target_title, results, stop_event)
     )
 
     thread_context = threading.Thread(
-        target=run_game_thread,
-        args=("Context-Based", start_url, target_context, results, stop_event)
+        target=run_game_thread_context,
+        args=("Context-Based", start_url, target_title, target_context, results, stop_event)
     )
 
     thread_title.start()
