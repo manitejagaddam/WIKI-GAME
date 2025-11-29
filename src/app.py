@@ -22,7 +22,7 @@ start_url = st.text_input(
 
 target_text = st.text_input(
     "Target Word / Page Title:",
-    "Nick Vujicic"
+    "London"
 )
 
 max_steps = st.slider("Max Steps:", 1, 200, 50)
