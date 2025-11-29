@@ -1,62 +1,107 @@
 import streamlit as st
+import threading
+
 from scapper import Scrapper
 from get_similar_word import GetSimilarWord
 from engine import WikipediaGame
+from fetch_target_summary import fetch_wikipedia_summary
+from run_thread import run_game_thread1, run_game_thread2
 
-st.set_page_config(
-    page_title="Wikipedia Navigator",
-    page_icon="🌐",
-    layout="wide"
-)
 
-st.title("🌐 Wikipedia Greedy Navigator")
-st.write("Navigate from one Wikipedia page to another using similarity search (no DFS).")
+st.set_page_config(page_title="Wikipedia Race Navigator", page_icon="🌐", layout="wide")
 
-# ------------------------------
+st.title("🌐 Wikipedia Greedy Navigator — Multithreaded Race Mode")
+st.write("Two threads race: one using Title-Based similarity & one using Context-Based similarity.")
+
+# --------------------------------------------------------------------
 # USER INPUTS
-# ------------------------------
+# --------------------------------------------------------------------
 start_url = st.text_input(
     "Start Wikipedia URL:",
-    "https://en.wikipedia.org/wiki/Parul_University"
+    "https://en.wikipedia.org/wiki/India"
 )
 
-target_text = st.text_input(
-    "Target Word / Page Title:",
+target_title = st.text_input(
+    "Target Page Title:",
     "London"
 )
 
-max_steps = st.slider("Max Steps:", 1, 200, 50)
-threshold = st.slider("Similarity Threshold:", 0.0, 1.0, 0.20)
+word_limit = st.slider("Word Limit for Context Extraction:", 20, 200, 80)
+max_steps = st.slider("Max Steps for Navigation:", 1, 200, 50)
+threshold = st.slider("Similarity Threshold:", 0.0, 1.0, 0.2)
 
-start_button = st.button("🚀 Start Navigation")
+start_button = st.button("🚀 Start Multithreaded Race")
 
-# ------------------------------
-# RUN
-# ------------------------------
+
+# --------------------------------------------------------------------
+# THREAD RUNNER
+# --------------------------------------------------------------------
+def run_navigation_race():
+    st.info("Fetching target context...")
+    target_context = fetch_wikipedia_summary(target_title, word_limit)
+
+    results = []
+    stop_event = threading.Event()
+
+    # THREAD 1 — Title-based
+    t1 = threading.Thread(
+        target=run_game_thread1,
+        args=("Title-Based", start_url, target_title, results, stop_event)
+    )
+
+    # THREAD 2 — Context-based
+    t2 = threading.Thread(
+        target=run_game_thread2,
+        args=("Context-Based", start_url, target_context, results, stop_event)
+    )
+
+    st.write("Starting threads...")
+
+    t1.start()
+    t2.start()
+
+    t1.join()
+    t2.join()
+
+    st.success("Race Completed!")
+
+    return results
+
+
+# --------------------------------------------------------------------
+# MAIN EXECUTION
+# --------------------------------------------------------------------
 if start_button:
-    if not start_url.strip() or not target_text.strip():
-        st.error("Please enter both Start URL and Target Target Word.")
+
+    if not start_url.strip() or not target_title.strip():
+        st.error("Please provide both Start URL and Target Title.")
         st.stop()
 
-    st.info("Loading models & scraper... please wait...")
+    st.warning("⏳ Running two navigation threads in parallel...")
 
-    scraper = Scrapper()
-    selector = GetSimilarWord()
-    game = WikipediaGame(scraper, selector, max_steps=max_steps, similarity_threshold=threshold)
+    results = run_navigation_race()
 
-    st.success("Navigation Started...")
+    # --------------------------------------------------------------
+    # DISPLAY RESULTS
+    # --------------------------------------------------------------
+    st.subheader("🏁 Race Result")
 
-    # RUN GAME
-    path = game.play(start_url, target_text)
+    if not results:
+        st.error("⚠ No thread finished. Probably got stuck.")
+        st.stop()
 
-    # DISPLAY PATH
-    st.subheader("🧭 Navigation Path")
+    winner = results[0]
 
-    for i, (title, url) in enumerate(path, start=1):
+    st.success(f"🏆 **Winner: {winner.name} Navigation**")
+
+    # Show winning path
+    st.markdown("### 🧭 Winning Path")
+    for i, (title, url) in enumerate(winner.path, start=1):
         st.markdown(f"**{i}. [{title}]({url})**")
 
-    # LAST STATUS
-    if path and path[-1][0].lower() == target_text.lower():
-        st.success("🎯 Successfully reached the target page!")
-    else:
-        st.warning("⚠ Could not reach the target page. Showing partial path.")
+    # Comparison info
+    if len(results) > 1:
+        st.markdown("### 🥈 Second Thread Result")
+        loser = results[1]
+        for i, (title, url) in enumerate(loser.path, start=1):
+            st.markdown(f"{i}. [{title}]({url})")
