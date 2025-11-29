@@ -28,11 +28,11 @@ def main():
 
     # Example: from Narendra Modi page to something like "New Delhi"
     start_url = "https://en.wikipedia.org/wiki/Parul_University"
-    target_text = "Shah Rukh Khan"
+    target_text = "Nick Vujicic"
 
     scraper = Scrapper()
     selector = GetSimilarWord()
-    game = WikipediaGame(scraper, selector, max_depth=10, similarity_threshold=0.85)
+    game = WikipediaGame(scraper, selector, max_steps=100, similarity_threshold=0.20)
 
     path = game.play(start_url, target_text)
 

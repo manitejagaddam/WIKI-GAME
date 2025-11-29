@@ -27,13 +27,14 @@ class WikipediaGame:
         self,
         scraper: Scrapper,
         selector: GetSimilarWord,
-        max_steps: int = 15,
-        similarity_threshold: float = 0.80
+        max_steps: int = 100,
+        similarity_threshold: float = 0.40
     ):
         self.scraper = scraper
         self.selector = selector
         self.max_steps = max_steps
         self.similarity_threshold = similarity_threshold
+        self.seen = set()
 
     def _canonical_url(self, url: str) -> str:
         parsed = urlparse(url)
@@ -53,21 +54,37 @@ class WikipediaGame:
         if not links:
             return None, None
 
-        best_link = None
-        best_score = -1
+        # Filter valid links
+        clean_links = [link for link in links if link.text and link.text.strip()]
+        if not clean_links:
+            return None, None
 
-        # Evaluate each link individually (fast)
-        for link in links:
-            if not link.text.strip():
-                continue
+        texts = [link.text for link in clean_links]
 
-            _, score = self.selector.get_similar_link(target, [link])
+        # Encode target once
+        query_emb = self.selector.model.encode([target])
 
-            if score > best_score:
-                best_link = link
-                best_score = score
+        # Encode all link texts at once
+        link_embs = self.selector.model.encode(texts)
+
+        similarities = np.dot(link_embs, query_emb.T).flatten()
+
+        # Mask visited URLs
+        for i, link in enumerate(clean_links):
+            if link.url in self.seen:
+                similarities[i] = -9999  # effectively remove it from competition
+
+        # Get best remaining link
+        best_idx = int(np.argmax(similarities))
+        best_link = clean_links[best_idx]
+        best_score = float(similarities[best_idx])
+
+        # Mark visited
+        self.seen.add(best_link.url)
 
         return best_link, best_score
+
+
 
     # ================================================================
     # 🔥 Main "Play" Loop (Greedy)
