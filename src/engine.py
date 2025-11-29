@@ -22,100 +22,87 @@ class Link:
     text: str
     url: str
 
-
-
 class WikipediaGame:
     def __init__(
         self,
         scraper: Scrapper,
         selector: GetSimilarWord,
-        max_depth: int = 5,
-        similarity_threshold: float = 0.85,
+        max_steps: int = 15,
+        similarity_threshold: float = 0.80
     ):
         self.scraper = scraper
         self.selector = selector
-        self.max_depth = max_depth
+        self.max_steps = max_steps
         self.similarity_threshold = similarity_threshold
-        self.visited = set()
 
     def _canonical_url(self, url: str) -> str:
-        from urllib.parse import urlparse
         parsed = urlparse(url)
         return parsed._replace(fragment="", query="").geturl()
 
     def _title_from_url(self, url: str) -> str:
-        from urllib.parse import urlparse
         parsed = urlparse(url)
         if not parsed.path.startswith("/wiki/"):
             return url
-        title = parsed.path.split("/wiki/")[-1]
-        return title.replace("_", " ")
+        return parsed.path.split("/wiki/")[-1].replace("_", " ")
 
-    # ===========================
-    # MAIN DFS WITH BACKTRACKING
-    # ===========================
-    def dfs(self, current_url: str, target: str, depth: int, path: List[Tuple[str, str]]):
-        current_url = self._canonical_url(current_url)
-        current_title = self._title_from_url(current_url)
-
-        logger.info(f"{'  '*depth}Exploring: {current_title} ({current_url}) Depth={depth}")
-
-        # Stop looping on revisits
-        if current_url in self.visited:
-            logger.info(f"{'  '*depth}Already visited. Backtracking...")
-            return False
-        
-        self.visited.add(current_url)
-        path.append((current_title, current_url))
-
-        # Check if we reached the target
-        if current_title.lower() == target.lower():
-            logger.info(f"{'  '*depth}Reached target page: {current_title}")
-            return True
-
-        if depth >= self.max_depth:
-            logger.info(f"{'  '*depth}Max depth reached. Backtracking...")
-            path.pop()
-            return False
-
-        # Get links from this page
+    # ================================================================
+    # 🔥 Greedy Step-by-Step Wikipedia Navigation (NO DFS)
+    # ================================================================
+    def _get_best_next_link(self, current_url: str, target: str):
         links = self.scraper.get_links(current_url)
         if not links:
-            logger.info(f"{'  '*depth}No links found. Backtracking...")
-            path.pop()
-            return False
+            return None, None
 
-        # Rank the links by similarity
-        ranked: List[Tuple[float, Link]] = []
+        best_link = None
+        best_score = -1
+
+        # Evaluate each link individually (fast)
         for link in links:
             if not link.text.strip():
                 continue
+
             _, score = self.selector.get_similar_link(target, [link])
-            ranked.append((score, link))
 
-        ranked.sort(reverse=True, key=lambda x: x[0])  # Best first
+            if score > best_score:
+                best_link = link
+                best_score = score
 
-        # Try each link in descending similarity
-        for score, link in ranked:
-            if score >= self.similarity_threshold:
-                logger.info(f"{'  '*depth}High similarity: {score:.4f} -> Trying {link.text}")
+        return best_link, best_score
 
-            if self.dfs(link.url, target, depth + 1, path):
-                return True
-
-        # If none worked → backtrack
-        logger.info(f"{'  '*depth}All links exhausted for {current_title}. Backtracking...")
-        path.pop()
-        return False
-
-    # PUBLIC METHOD
+    # ================================================================
+    # 🔥 Main "Play" Loop (Greedy)
+    # ================================================================
     def play(self, start_url: str, target: str):
+        current_url = self._canonical_url(start_url)
         path = []
-        found = self.dfs(start_url, target, 0, path)
 
-        if not found:
-            logger.info("Did not reach the target. Partial path shown:")
-        else:
-            logger.info("Successfully reached target!")
+        logger.info(f"Starting greedy wiki navigation from {start_url} -> Target: {target}")
 
+        for step in range(self.max_steps):
+            title = self._title_from_url(current_url)
+            path.append((title, current_url))
+
+            logger.info(f"[STEP {step}] At page: {title}")
+
+            # Check if reached target
+            if title.lower() == target.lower():
+                logger.info("🎯 Reached target page!")
+                return path
+
+            # Compute best next link
+            best_link, score = self._get_best_next_link(current_url, target)
+
+            if not best_link:
+                logger.info("❌ No further links. Stopping.")
+                return path
+
+            if score < self.similarity_threshold:
+                logger.info(f"⚠ Best similarity {score:.4f} < threshold {self.similarity_threshold}")
+                logger.info("Stopping because no good next hop found.")
+                return path
+
+            logger.info(f"➡ Best match: '{best_link.text}' ({score:.4f}) → {best_link.url}")
+            current_url = self._canonical_url(best_link.url)
+
+        logger.info("⚠ Max steps reached.")
         return path

@@ -197,8 +197,8 @@ class WikipediaGame:
 # -----------------------
 def main():
     # Example: from Narendra Modi page to something like "New Delhi"
-    start_url = "https://en.wikipedia.org/wiki/Parul_University"
-    target_text = "Shah Rukh Khan"
+    start_url = "https://en.wikipedia.org/wiki/India"
+    target_text = "Sundar Pichai"
 
     scraper = Scrapper()
     selector = GetSimilarWord()
