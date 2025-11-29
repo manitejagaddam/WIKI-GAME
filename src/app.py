@@ -1,3 +1,6 @@
+
+import os
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 import streamlit as st
 import threading
 import time
@@ -8,9 +11,6 @@ from get_similar_word import GetSimilarWord
 from engine import WikipediaGame
 from fetch_target_summary import fetch_wikipedia_summary
 
-
-import os
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
 
 
@@ -213,7 +213,7 @@ with st.container():
         word_limit = st.slider("🧠 Context Word Limit:", 20, 200, 80)
 
     with col_input2:
-        target_title = st.text_input("🎯 Target Page Title:", "London")
+        target_title = st.text_input("🎯 Target Page Title:", "Bhupalpally")
         max_steps = st.slider("🔁 Max Steps:", 5, 200, 50)
 
     threshold = st.slider("📏 Similarity Threshold:", 0.0, 1.0, 0.2)

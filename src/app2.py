@@ -1,3 +1,5 @@
+import os
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 import streamlit as st
 import threading
 from urllib.parse import urlparse
@@ -7,6 +9,8 @@ from get_similar_word import GetSimilarWord
 from engine import WikipediaGame
 from fetch_target_summary import fetch_wikipedia_summary
 from run_thread import run_game_thread_title, run_game_thread_context
+
+
 
 
 # --------------------------------------------------------------------
@@ -67,13 +71,13 @@ def run_navigation_race():
     # Thread 1 - Title based
     t1 = threading.Thread(
         target=run_game_thread_title,
-        args=("Title-Based", lang_start_url, target_title, target_lang, max_steps, threshold, results, stop_event)
+        args=("Title-Based", lang_start_url, target_title, results, stop_event, target_lang, max_steps, threshold)
     )
 
     # Thread 2 - Context based
     t2 = threading.Thread(
         target=run_game_thread_context,
-        args=("Context-Based", lang_start_url, target_title, target_context, target_lang, max_steps, threshold, results, stop_event)
+        args=("Context-Based", lang_start_url, target_title, target_context, results, stop_event, target_lang, max_steps, threshold)
     )
 
     st.write("Starting threads...")

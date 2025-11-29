@@ -22,7 +22,7 @@ class PathResult:
 
 
 
-def run_game_thread_title(name, start_url, target, target_lang, max_steps, threshold_val, results_list, stop_event):
+def run_game_thread_title(name, start_url, target, results_list, stop_event, target_lang, max_steps = 100, threshold_val = 0.30):
     """Thread worker with early stop support."""
     scraper = Scrapper()
     selector = GetSimilarWord()
@@ -48,11 +48,11 @@ def run_game_thread_title(name, start_url, target, target_lang, max_steps, thres
 
 
 
-def run_game_thread_context(name, start_url, target, context, max_steps, target_lang, threshold_val, results_list, stop_event):
+def run_game_thread_context(name, start_url, target, context, results_list, stop_event, target_lang, max_steps = 100, threshold_val = 0.30):
     """Thread worker with early stop support."""
     scraper = Scrapper()
     selector = GetSimilarWord()
-    game = WikipediaGame(scraper, selector, target_lang= target_lang, max_steps=max_steps - 1, similarity_threshold=threshold_val)
+    game = WikipediaGame(scraper, selector, target_lang= target_lang, max_steps=max_steps, similarity_threshold=threshold_val)
 
     logger.info(f"[{name}] Starting game...")
 

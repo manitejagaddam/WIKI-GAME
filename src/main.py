@@ -1,3 +1,5 @@
+import os
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 import threading
 from get_similar_word import GetSimilarWord
 from scapper import Scrapper
@@ -7,6 +9,7 @@ from engine import WikipediaGame
 import logging
 from dataclasses import dataclass
 from run_thread import run_game_thread_context, run_game_thread_title
+
 
 
 
