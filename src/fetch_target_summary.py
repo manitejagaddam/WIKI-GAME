@@ -1,29 +1,29 @@
-import requests
 from bs4 import BeautifulSoup
 from clean_summary import clean_text
+from http_session import create_session
 
 LANGS = ["en", "simple", "es", "fr", "de", "hi", "ru", "ja"]
 
-def fetch_wikipedia_summary(title: str, word_limit: int = 100) -> str:
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-            " AppleWebKit/537.36 (KHTML, like Gecko)"
-            " Chrome/120.0.0.0 Safari/537.36"
-        )
-    })
 
+def safe_get(session, url, timeout=5):
+    try:
+        return session.get(url, timeout=timeout)
+    except Exception as e:
+        print(f"[ERROR] GET failed for {url} → {e}")
+        return None
+
+
+def fetch_wikipedia_summary(title: str, word_limit: int = 100) -> str:
+    session = create_session()
     normalized_title = title.replace(" ", "_")
-    
+
     for lang in LANGS:
         url = f"https://{lang}.wikipedia.org/wiki/{normalized_title}"
         print(f"Trying {lang.upper()} → {url}")
 
-        resp = session.get(url)
-
-        if resp.status_code != 200:
-            continue  # try next language
+        resp = safe_get(session, url)
+        if not resp or resp.status_code != 200:
+            continue
 
         soup = BeautifulSoup(resp.text, "html.parser")
         paragraphs = soup.select("#mw-content-text .mw-parser-output > p")
@@ -35,13 +35,11 @@ def fetch_wikipedia_summary(title: str, word_limit: int = 100) -> str:
             if not cleaned or len(cleaned) < 30:
                 continue
 
-            # take first meaningful paragraph
             words = cleaned.split()
             summary = " ".join(words[:word_limit])
 
             print(f"Found summary in {lang.upper()}!")
             return summary
 
-    # fallback to title if nothing found
     print("No valid summary found in any language.")
     return title
