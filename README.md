@@ -119,6 +119,18 @@ Alternate:
 streamlit run src/app2.py
 ```
 
+Alternate 2:
+
+```bash
+uv run main.py
+```
+
+Alternate 3:
+
+```bash
+uv run src/main.py
+```
+
 ### Direct script
 
 ```bash
