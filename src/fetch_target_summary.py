@@ -15,7 +15,6 @@ def fetch_wikipedia_summary(title: str, word_limit: int = 100) -> str:
     })
     
     resp = session.get(url)
-    print(resp, url)
 
     if resp.status_code != 200:
         print("Error fetching page")
@@ -39,6 +38,7 @@ def fetch_wikipedia_summary(title: str, word_limit: int = 100) -> str:
         # take first meaningful paragraph
         words = cleaned.split()
         summary = " ".join(words[:word_limit])
+        print(summary)
         return summary
 
     # fallback
