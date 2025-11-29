@@ -9,6 +9,12 @@ from engine import WikipediaGame
 from fetch_target_summary import fetch_wikipedia_summary
 
 
+import os
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
+
+
+
+
 # ==============================================================
 # PAGE CONFIG & GLOBAL CSS
 # ==============================================================
