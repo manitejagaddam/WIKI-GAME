@@ -58,18 +58,6 @@ class GetSimilarWord:
             if not re.search(r"[a-zA-Z]", text):
                 continue
 
-            # ❌ skip blacklist matches
-            if text in blacklist:
-                continue
-
-            # ❌ skip if contains navigation keywords
-            if any(b in text for b in ["back", "home", "login", "previous", "next"]):
-                continue
-
-            # ❌ remove duplicates by normalized text
-            if text in seen:
-                continue
-
             seen.add(text)
             cleaned.append(link)
 
