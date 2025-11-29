@@ -77,6 +77,7 @@ class WikipediaGame:
             return None, None
 
         texts = [link.text for link in clean_links]
+        print(texts)
 
         # Encode target once
         query_emb = self.selector.model.encode([target])
